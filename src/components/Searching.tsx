@@ -45,9 +45,13 @@ export const Searching = ({
   };
 
   return (
-    <section className="flex">
+    <section className="workspace-layout">
       <aside className="app-sidebar">
         <div className="sidebar-content">
+          <div className="panel-heading">
+            <span>Scanner</span>
+            <strong>{state.percentage}%</strong>
+          </div>
           <menu className="sidebar-filters-grid">
             <p>Filter</p>
             <label className="badge m-small">
@@ -138,11 +142,11 @@ export const Searching = ({
               Clear
             </button>
           </div>
-          <div className="sidebar-stats">
-            <p>Displayed: {usersForDisplay.length}</p>
-            <p>Total Scanned: {state.results.length}</p>
+          <div className="sidebar-stats metric-stack">
+            <p><span>Displayed</span><strong>{usersForDisplay.length}</strong></p>
+            <p><span>Total scanned</span><strong>{state.results.length}</strong></p>
             <p className="whitelist-counter">
-              <span className="whitelist-badge">★</span> Whitelisted: {state.whitelistedResults.length}
+              <span>Whitelisted</span><strong>★ {state.whitelistedResults.length}</strong>
             </p>
           </div>
 
@@ -235,12 +239,13 @@ export const Searching = ({
             });
           }}
         >
-          UNFOLLOW ({state.selectedResults.length})
+          Unfollow ({state.selectedResults.length})
         </button>
       </aside>
       <article className="results-container">
         <nav className="tabs-container">
-          <div
+          <button
+            type="button"
             className={`tab ${state.currentTab === "non_whitelisted" ? "tab-active" : ""}`}
             onClick={() => {
               if (state.currentTab === "non_whitelisted") {
@@ -254,8 +259,9 @@ export const Searching = ({
             }}
           >
             Non-Whitelisted
-          </div>
-          <div
+          </button>
+          <button
+            type="button"
             className={`tab ${state.currentTab === "whitelisted" ? "tab-active" : ""}`}
             onClick={() => {
               if (state.currentTab === "whitelisted") {
@@ -269,7 +275,7 @@ export const Searching = ({
             }}
           >
             Whitelisted
-          </div>
+          </button>
         </nav>
         {getCurrentPageUnfollowers(usersForDisplay, state.page).map(user => {
           const firstLetter = user.username.substring(0, 1).toUpperCase();

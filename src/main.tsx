@@ -2,7 +2,7 @@ import React, { ChangeEvent, useEffect, useState } from "react";
 import { render } from "react-dom";
 import "./styles.scss";
 
-import { User, UserNode } from "./model/user";
+import { Typename, User, UserNode } from "./model/user";
 import { Toast } from "./components/Toast";
 import { UserCheckIcon } from "./components/icons/UserCheckIcon";
 import { UserUncheckIcon } from "./components/icons/UserUncheckIcon";
@@ -24,6 +24,57 @@ import { Unfollowing } from "./components/Unfollowing";
 import { Timings } from "./model/timings";
 import { loadWhitelist, saveWhitelist, loadTimings, saveTimings } from "./utils/whitelist-manager";
 
+const LOCAL_PREVIEW_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
+const isLocalPreview = LOCAL_PREVIEW_HOSTS.has(location.hostname);
+
+const _avatarUrl = (seed: string): string =>
+  `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundColor=0f172a,1f2937,312e81&fontFamily=Verdana`;
+
+const _createPreviewUser = (
+  id: string,
+  username: string,
+  fullName: string,
+  options: { readonly isPrivate?: boolean; readonly isVerified?: boolean; readonly followsViewer?: boolean } = {},
+): UserNode => ({
+  id,
+  username,
+  full_name: fullName,
+  profile_pic_url: _avatarUrl(username),
+  is_private: options.isPrivate ?? false,
+  is_verified: options.isVerified ?? false,
+  followed_by_viewer: true,
+  follows_viewer: options.followsViewer ?? false,
+  requested_by_viewer: false,
+  reel: {
+    id,
+    expiring_at: 0,
+    has_pride_media: false,
+    latest_reel_media: 0,
+    seen: null,
+    owner: {
+      __typename: Typename.GraphUser,
+      id,
+      profile_pic_url: _avatarUrl(username),
+      username,
+    },
+  },
+});
+
+const _getPreviewUsers = (): readonly UserNode[] => [
+  _createPreviewUser("1", "alina.frames", "Alina Moreno", { isVerified: true }),
+  _createPreviewUser("2", "brassandbone", "Theo Walsh", { isPrivate: true }),
+  _createPreviewUser("3", "citrus.archive", "Mara Kim", { followsViewer: true }),
+  _createPreviewUser("4", "dawnledger", "Jon Bell", { isPrivate: true }),
+  _createPreviewUser("5", "elias.market", "Elias Noor", { isVerified: true }),
+  _createPreviewUser("6", "fieldnotes.studio", "Nadia Reyes"),
+  _createPreviewUser("7", "glint.supply", "Remy Park", { followsViewer: true }),
+  _createPreviewUser("8", "harbor.sequence", "Ivy Chen", { isPrivate: true }),
+  _createPreviewUser("9", "inkline.daily", "Sofia Grant"),
+  _createPreviewUser("10", "juniper.signal", "Cal Reed", { isVerified: true }),
+  _createPreviewUser("11", "keystone.labs", "Mina Torres"),
+  _createPreviewUser("12", "lowlight.club", "Owen Voss", { isPrivate: true }),
+];
+
 // pause
 let scanningPaused = false;
 
@@ -34,7 +85,27 @@ function pauseScan() {
 
 function App() {
   const [state, setState] = useState<State>({
-    status: "initial",
+    ...(
+      isLocalPreview && new URLSearchParams(location.search).get("preview") === "scanning"
+        ? {
+          status: "scanning",
+          page: 1,
+          searchTerm: "",
+          currentTab: "non_whitelisted",
+          percentage: 100,
+          results: _getPreviewUsers(),
+          selectedResults: _getPreviewUsers().slice(0, 3),
+          whitelistedResults: _getPreviewUsers().slice(10, 12),
+          filter: {
+            showNonFollowers: true,
+            showFollowers: false,
+            showVerified: true,
+            showPrivate: true,
+            showWithOutProfilePicture: true,
+          },
+        } as State
+        : { status: "initial" as const }
+    ),
   });
 
   const [toast, setToast] = useState<{ readonly show: false } | { readonly show: true; readonly text: string }>({
@@ -72,6 +143,27 @@ function App() {
 
   const onScan = async () => {
     if (state.status !== "initial") {
+      return;
+    }
+    if (isLocalPreview) {
+      const previewUsers = _getPreviewUsers();
+      setState({
+        status: "scanning",
+        page: 1,
+        searchTerm: "",
+        currentTab: "non_whitelisted",
+        percentage: 100,
+        results: previewUsers,
+        selectedResults: previewUsers.slice(0, 3),
+        whitelistedResults: previewUsers.slice(10, 12),
+        filter: {
+          showNonFollowers: true,
+          showFollowers: false,
+          showVerified: true,
+          showPrivate: true,
+          showWithOutProfilePicture: true,
+        },
+      });
       return;
     }
     const whitelistedResults = loadWhitelist();
@@ -446,7 +538,7 @@ function App() {
   );
 }
 
-if (location.hostname !== INSTAGRAM_HOSTNAME) {
+if (location.hostname !== INSTAGRAM_HOSTNAME && !isLocalPreview) {
   alert("Can be used only on Instagram routes");
 } else {
   document.title = "InstagramUnfollowers";
